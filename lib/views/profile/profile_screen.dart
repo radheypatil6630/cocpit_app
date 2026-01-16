@@ -38,43 +38,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Map<String, dynamic>? profile;
   bool isLoading = true;
 
-  // Profile Data State
   String name = "";
   String headline = "";
   String location = "";
   String about = "";
-  
-  String openTo = "";
-  String availability = "";
-  String preference = "";
+
+  String openTo = "Full-time";
+  String availability = "Immediate";
+  String preference = "Hybrid";
+
   String profileImage = 'lib/images/profile.jpg';
   String? coverImage;
 
   List<Experience> experiences = [];
   List<Education> educations = [];
   List<String> skills = [];
-
-  final List<UserPost> posts = [
-    UserPost(
-      title: "Just finished a deep dive into data analysis trends for 2024.",
-      content: "Just finished a deep dive into data analysis trends for 2024. The shift towards AI-driven forecasting is fascinating! #DataAnalysis #FinTech",
-      date: "1d ago",
-      likes: 1200,
-      comments: 15,
-      shares: 8,
-      category: "Professional",
-    ),
-  ];
-
-  final List<Map<String, dynamic>> suggestedUsers = [
-    {
-      'name': 'Sarah Williams',
-      'role': 'UX Designer',
-      'followers': '2.3k',
-      'profile': 'lib/images/profile3.jpg',
-      'isVerified': true,
-    },
-  ];
 
   bool isOverviewSelected = true;
 
@@ -84,71 +62,71 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _loadProfile();
   }
 
+  /// =========================
+  /// LOAD PROFILE + IDENTITY
+  /// =========================
   Future<void> _loadProfile() async {
     try {
       final data = await profileService.getMyProfile();
-      if (data == null) return;
+      final identity = await profileService.getIdentity();
+
+      if (!mounted || data == null) return;
+
+      final user = data['user'] ?? {};
+
+      // ✅ MOVING PARSING OUTSIDE SETSTATE (FIX FOR MAIN THREAD OVERLOAD)
+      final List<Experience> fetchedExperiences = (data['experiences'] as List? ?? [])
+          .map((e) => Experience.fromJson(e))
+          .toList();
+
+      final List<Education> fetchedEducations = (data['educations'] as List? ?? [])
+          .map((e) => Education.fromJson(e))
+          .toList();
+
+      final List<String> fetchedSkills = (data['skills'] as List? ?? [])
+          .map((s) => s is Map ? s['name'].toString() : s.toString())
+          .toList();
 
       setState(() {
         profile = data;
-        final user = data['user'];
 
-        name = user['full_name'] ?? '';
+        // ✅ BACKEND-CORRECT KEYS
+        name = user['name'] ?? '';
         headline = user['headline'] ?? '';
         location = user['location'] ?? '';
-        about = user['about_text'] ?? '';
-        profileImage = user['avatar_url'] ?? profileImage;
+        about = user['about'] ?? '';
+        profileImage = user['avatar'] ?? profileImage;
 
-        openTo = user['open_to'] ?? 'Full-time';
-        availability = user['availability'] ?? 'Immediate';
-        preference = user['work_preference'] ?? 'Hybrid';
+        experiences = fetchedExperiences;
+        educations = fetchedEducations;
+        skills = fetchedSkills;
 
-        experiences = (data['experiences'] as List)
-            .map((e) => Experience.fromJson(e))
-            .toList();
+        if (identity != null) {
+          openTo = identity['open_to'] ?? openTo;
+          availability = identity['availability'] ?? availability;
+          preference = identity['work_preference'] ?? preference;
+        }
 
-        educations = (data['educations'] as List)
-            .map((e) => Education.fromJson(e))
-            .toList();
-
-        // 🔥 Normalize skills to list of names for UI
-        skills = (data['skills'] as List).map((s) {
-          if (s is String) return s;
-          if (s is Map) return (s['name'] ?? '').toString();
-          return s.toString();
-        }).where((s) => s.isNotEmpty).toList();
+        isLoading = false;
       });
     } catch (e) {
       debugPrint("❌ Profile load error: $e");
-    } finally {
       if (mounted) setState(() => isLoading = false);
     }
   }
 
-  void _showSkillsModal() async {
-    final result = await showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => SkillsModal(initialSkills: profile?['skills'] ?? []),
-    );
-
-    if (result == true) {
-      await _loadProfile();
-    }
-  }
-
+  /// =========================
+  /// MODALS
+  /// =========================
   void _showExperienceModal({Experience? experience, int? index}) async {
     final result = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => ExperienceModal(experience: experience),
+      builder: (_) => ExperienceModal(experience: experience),
     );
 
-    if (result == true) {
-      await _loadProfile();
-    }
+    if (result == true) await _loadProfile();
   }
 
   void _showEducationModal({Education? education, int? index}) async {
@@ -156,51 +134,91 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => EducationModal(education: education),
+      builder: (_) => EducationModal(education: education),
     );
 
-    if (result == true) {
+    if (result == true) await _loadProfile();
+  }
+
+  void _showSkillsModal() async {
+    final result = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => SkillsModal(initialSkills: skills),
+    );
+
+    if (result == true) await _loadProfile();
+  }
+
+  /// =========================
+  /// EDIT PROFILE
+  /// =========================
+  void _navigateToEditProfile() async {
+    final result = await Navigator.push<Map<String, String>>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => EditProfileScreen(
+          initialData: {
+            'name': name,
+            'headline': headline,
+            'jobTitle': profile?['user']?['job_title'] ?? '',
+            'company': profile?['user']?['company_name'] ?? '',
+            'school': profile?['user']?['school'] ?? '',
+            'degree': profile?['user']?['degree'] ?? '',
+            'location': location,
+            'about': about,
+          },
+        ),
+      ),
+    );
+
+    // ✅ FIX 1: Delay the update until navigation is finished
+    if (!mounted || result == null) return;
+
+    // 🔥 Let pop animation complete to avoid frame skip
+    await Future.delayed(const Duration(milliseconds: 200));
+
+    final success = await profileService.updateProfile(
+      fullName: result['name']!,
+      headline: result['headline']!,
+      jobTitle: result['jobTitle']!,
+      company: result['company']!,
+      school: result['school']!,
+      degree: result['degree']!,
+      location: result['location']!,
+      about: result['about']!,
+    );
+
+    if (success && mounted) {
       await _loadProfile();
     }
   }
 
-  // ... rest of the methods (edit identity, edit profile, logout, etc)
-
-  void _handleProfilePhotoActions() {
-    PhotoActionHelper.showPhotoActions(
-      context: context,
-      title: "Profile Photo",
-      imagePath: profileImage,
-      heroTag: 'profile_hero',
-      onUpdate: () {},
-      onDelete: () => setState(() => profileImage = ''),
-    );
-  }
-
-  void _handleCoverPhotoActions() {
-    PhotoActionHelper.showPhotoActions(
-      context: context,
-      title: "Cover Photo",
-      imagePath: coverImage,
-      heroTag: 'cover_hero',
-      onUpdate: () {},
-      onDelete: () => setState(() => coverImage = null),
-    );
-  }
-
+  /// =========================
+  /// EDIT IDENTITY
+  /// =========================
   void _showEditIdentityModal() async {
     final result = await showModalBottomSheet<Map<String, String>>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => EditIdentityModal(
+      builder: (_) => EditIdentityModal(
         initialOpenTo: openTo,
         initialAvailability: availability,
         initialPreference: preference,
       ),
     );
 
-    if (result != null) {
+    if (result == null) return;
+
+    final success = await profileService.updateIdentity(
+      openTo: result['openTo']!,
+      availability: result['availability']!,
+      preference: result['preference']!,
+    );
+
+    if (success) {
       setState(() {
         openTo = result['openTo']!;
         availability = result['availability']!;
@@ -209,26 +227,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  void _navigateToEditProfile() async {
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => EditProfileScreen(
-          initialData: {
-            'name': name,
-            'headline': headline,
-            'location': location,
-            'about': about,
-          },
-        ),
-      ),
-    );
-
-    if (result == true) {
-      await _loadProfile();
-    }
-  }
-
+  /// =========================
+  /// LOGOUT
+  /// =========================
   Future<void> _logout() async {
     try {
       await authService.logout();
@@ -241,7 +242,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (_) => const SignInScreen()),
-      (_) => false,
+          (_) => false,
     );
   }
 
@@ -263,18 +264,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
       body: RefreshIndicator(
         onRefresh: _loadProfile,
         child: SingleChildScrollView(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           physics: const AlwaysScrollableScrollPhysics(),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              ProfileHeader(
-                user: profile!['user'],
-                profileImage: profileImage,
-                coverImage: coverImage,
-                onMenuPressed: () => _scaffoldKey.currentState?.openEndDrawer(),
-                onCameraPressed: _handleProfilePhotoActions,
-                onCoverCameraPressed: _handleCoverPhotoActions,
-                backgroundColor: theme.scaffoldBackgroundColor,
+              // ✅ RepaintBoundary for heavy components
+              RepaintBoundary(
+                child: ProfileHeader(
+                  user: profile!['user'],
+                  profileImage: profileImage,
+                  coverImage: coverImage,
+                  onMenuPressed: () => _scaffoldKey.currentState?.openEndDrawer(),
+                  onCameraPressed: () {},
+                  onCoverCameraPressed: () {},
+                  backgroundColor: theme.scaffoldBackgroundColor,
+                ),
               ),
               const SizedBox(height: 80),
               ProfileInfoIdentity(
@@ -287,52 +292,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 onEditProfile: _navigateToEditProfile,
                 onEditIdentity: _showEditIdentityModal,
               ),
-              _buildDivider(theme),
-              const ProfileStats(),
-              _buildDivider(theme),
+              _divider(theme),
+              const RepaintBoundary(child: ProfileStats()),
+              _divider(theme),
               ProfileLivingResume(
                 isOverviewSelected: isOverviewSelected,
-                onTabChanged: (selected) => setState(() => isOverviewSelected = selected),
-                onUploadResume: () {
-                  showModalBottomSheet(
-                    context: context,
-                    isScrollControlled: true,
-                    backgroundColor: Colors.transparent,
-                    builder: (context) => const UploadResumeModal(),
-                  );
-                },
+                onTabChanged: (v) => setState(() => isOverviewSelected = v),
+                onUploadResume: () {},
                 onDownloadPDF: () {},
               ),
-              _buildDivider(theme),
+              _divider(theme),
               ProfileAboutSection(about: about),
-              _buildDivider(theme),
+              _divider(theme),
               ProfileExperienceSection(
                 experiences: experiences,
                 onAddEditExperience: _showExperienceModal,
               ),
-              _buildDivider(theme),
+
               ProfileEducationSection(
                 educations: educations,
                 onAddEditEducation: _showEducationModal,
               ),
-              _buildDivider(theme),
+
+              _divider(theme),
               ProfileSkillsSection(
                 skills: skills,
                 onAddSkill: _showSkillsModal,
               ),
-              _buildDivider(theme),
-              ProfileLatestPostsSection(
-                posts: posts,
-                userName: name,
-                onSeeAllPosts: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => AllPostsScreen(posts: posts, userName: name),
-                  ),
-                ),
-              ),
-              _buildDivider(theme),
-              ProfileSuggestedSection(suggestedUsers: suggestedUsers),
+              _divider(theme),
+              ProfileSuggestedSection(suggestedUsers: const []),
               const SizedBox(height: 80),
             ],
           ),
@@ -341,44 +329,40 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildMenuDrawer(ThemeData theme) {
-    return Drawer(
-      width: 200,
-      backgroundColor: theme.colorScheme.surface.withOpacity(0.95),
-      child: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 20),
-            _buildDrawerItem(theme, Icons.settings_outlined, "Settings", () {
-              Navigator.pop(context);
-              Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()));
-            }),
-            _buildDrawerItem(theme, Icons.analytics_outlined, "Analytics", () {
-              Navigator.pop(context);
-              Navigator.push(context, MaterialPageRoute(builder: (_) => const AnalyticsDashboardScreen()));
-            }),
-            _buildDrawerItem(theme, Icons.logout, "Log out", _logout),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDrawerItem(ThemeData theme, IconData? icon, String title, VoidCallback onTap) {
-    return ListTile(
-      leading: icon != null ? Icon(icon, color: theme.iconTheme.color, size: 20) : null,
-      title: Text(title, style: theme.textTheme.bodyLarge),
-      onTap: onTap,
-      dense: true,
-      visualDensity: VisualDensity.compact,
-    );
-  }
-
-  Widget _buildDivider(ThemeData theme) {
+  Widget _divider(ThemeData theme) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Divider(color: theme.dividerColor, thickness: 1, height: 80),
+    );
+  }
+
+  Widget _buildMenuDrawer(ThemeData theme) {
+    return Drawer(
+      child: Column(
+        children: [
+          ListTile(
+            leading: const Icon(Icons.settings),
+            title: const Text("Settings"),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const SettingsScreen()),
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.analytics),
+            title: const Text("Analytics"),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const AnalyticsDashboardScreen()),
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.logout),
+            title: const Text("Logout"),
+            onTap: _logout,
+          ),
+        ],
+      ),
     );
   }
 }

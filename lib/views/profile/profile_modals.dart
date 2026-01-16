@@ -793,28 +793,37 @@ class _SkillsModalState extends State<SkillsModal> {
 
   Future<void> _saveChanges() async {
     setState(() => _isSaving = true);
-    try {
-      // 1. Identify added (temp IDs)
-      final added = _workingSkills.where((s) => s.id.startsWith('temp_')).toList();
-      // 2. Identify removed (not in working list)
-      final removed = _originalSkills.where((orig) => !_workingSkills.any((w) => w.id == orig.id)).toList();
 
-      // Process deletions
+    try {
+      // Added skills (temporary IDs)
+      final addedNames = _workingSkills
+          .where((s) => s.id.startsWith('temp_'))
+          .map((s) => s.name)
+          .toList();
+
+      // Removed skills
+      final removed = _originalSkills
+          .where((orig) => !_workingSkills.any((w) => w.id == orig.id))
+          .toList();
+
+      // Delete removed skills
       for (final s in removed) {
         await profileService.deleteSkill(s.id);
       }
-      // Process additions
-      for (final s in added) {
-        await profileService.addSkill(s.name);
+
+      // Add new skills (BATCH)
+      if (addedNames.isNotEmpty) {
+        await profileService.addSkills(addedNames);
       }
 
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
-      debugPrint("Save error: $e");
+      debugPrint("Save skills error: $e");
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
   }
+
 
   @override
   Widget build(BuildContext context) {

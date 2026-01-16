@@ -3,7 +3,7 @@ import 'profile_models.dart';
 
 class ProfileEducationSection extends StatelessWidget {
   final List<Education> educations;
-  final Function({Education? education, int? index}) onAddEditEducation;
+  final EducationCallback onAddEditEducation;
   final bool isReadOnly;
 
   const ProfileEducationSection({
@@ -12,6 +12,7 @@ class ProfileEducationSection extends StatelessWidget {
     required this.onAddEditEducation,
     this.isReadOnly = false,
   });
+
 
   @override
   Widget build(BuildContext context) {

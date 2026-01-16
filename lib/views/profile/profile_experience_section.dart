@@ -3,7 +3,7 @@ import 'profile_models.dart';
 
 class ProfileExperienceSection extends StatelessWidget {
   final List<Experience> experiences;
-  final Function({Experience? experience, int? index}) onAddEditExperience;
+  final ExperienceCallback onAddEditExperience;
   final bool isReadOnly;
 
   const ProfileExperienceSection({
@@ -12,6 +12,7 @@ class ProfileExperienceSection extends StatelessWidget {
     required this.onAddEditExperience,
     this.isReadOnly = false,
   });
+
 
   @override
   Widget build(BuildContext context) {

@@ -120,7 +120,7 @@ class _SignInScreenState extends State<SignInScreen> {
                     controller: passCtrl,
                     hint: "Enter your password",
                     obscureText: !isPasswordVisible,
-                    validator: AppValidator.validatePassword,
+                    validator: null,
                     icon: Icons.lock_outline,
                     suffixIcon: IconButton(
                       icon: Icon(

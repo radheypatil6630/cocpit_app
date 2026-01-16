@@ -4,7 +4,7 @@ class ApiConfig {
   // ======================
 
   static const String protocol = "http";
-  static const String host = "192.168.1.2"; // Node backend IP
+  static const String host = "192.168.1.13"; // ✅ REQUIRED for emulator
   static const String port = "5000";
 
   static const String baseUrl = "$protocol://$host:$port/api";

@@ -128,3 +128,12 @@ class UserPost {
     required this.category,
   });
 }
+typedef ExperienceCallback = void Function({
+Experience? experience,
+int? index,
+});
+
+typedef EducationCallback = void Function({
+Education? education,
+int? index,
+});
