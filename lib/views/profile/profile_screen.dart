@@ -52,7 +52,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   List<Experience> experiences = [];
   List<Education> educations = [];
-  List<String> skills = [];
+  List<Skill> skills = [];
 
   bool isOverviewSelected = true;
 
@@ -83,8 +83,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           .map((e) => Education.fromJson(e))
           .toList();
 
-      final List<String> fetchedSkills = (data['skills'] as List? ?? [])
-          .map((s) => s is Map ? s['name'].toString() : s.toString())
+      final List<Skill> fetchedSkills = (data['skills'] as List? ?? [])
+          .map((s) => Skill.fromJson(s))
           .toList();
 
       setState(() {
