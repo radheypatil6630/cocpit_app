@@ -157,10 +157,8 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
             ),
             _buildDivider(theme),
             ProfileSkillsSection(
-
               skills: mappedSkills,
               onAddSkill: () {},
-
               isReadOnly: true,
             ),
             const SizedBox(height: 80),

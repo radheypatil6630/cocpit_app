@@ -24,7 +24,6 @@ import 'photo_action_helper.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 
-
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
@@ -55,9 +54,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   List<Experience> experiences = [];
   List<Education> educations = [];
-
-
   List<Skill> skills = [];
+
   bool isOverviewSelected = true;
   int connectionCount = 0;
   String? latestEducation;
@@ -101,7 +99,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           .map((e) => Education.fromJson(e))
           .toList();
 
-
       final List<Skill> fetchedSkills = (data['skills'] as List? ?? [])
           .map((s) => Skill.fromJson(s))
           .toList();
@@ -115,7 +112,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         educationStr =
         "${edu.school}";
       }
-
 
 
       setState(() {
@@ -175,6 +171,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Failed to update avatar")),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleCoverUpdate() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+
+    if (image == null) return;
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Uploading cover photo...")),
+    );
+
+    final success = await profileService.uploadCover(File(image.path));
+
+    if (success) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Cover photo updated successfully")),
+        );
+        await _loadProfile();
+      }
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Failed to update cover photo")),
         );
       }
     }
@@ -351,7 +377,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       onDelete: () {}, // Implement delete if API supports it
                     );
                   },
-                  onCoverCameraPressed: () {},
+                  onCoverCameraPressed: () {
+                    PhotoActionHelper.showPhotoActions(
+                      context: context,
+                      title: "Cover Photo",
+                      imagePath: coverImage,
+                      heroTag: 'cover_hero',
+                      onUpdate: _handleCoverUpdate,
+                      onDelete: () {}, // Implement delete if API supports it
+                    );
+                  },
                   backgroundColor: theme.scaffoldBackgroundColor,
                 ),
               ),
