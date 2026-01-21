@@ -298,4 +298,18 @@ class ProfileService {
     final response = await ApiClient.delete("/profile/skills/$skillId");
     return response.statusCode == 200;
   }
+
+  /// =========================
+  /// 🔗 CONNECTIONS
+  /// =========================
+  Future<int> getConnectionCount(String userId) async {
+    try {
+      final response = await ApiClient.get("/users/$userId/connections/count");
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['connection_count'] ?? 0;
+      }
+    } catch (_) {}
+    return 0;
+  }
 }
