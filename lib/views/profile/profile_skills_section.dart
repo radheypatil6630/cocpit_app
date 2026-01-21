@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'profile_models.dart';
 
+import 'profile_models.dart';
+
 class ProfileSkillsSection extends StatelessWidget {
+
   final List<Skill> skills;
   final VoidCallback onAddSkill;
   final bool isReadOnly;
@@ -49,6 +52,7 @@ class ProfileSkillsSection extends StatelessWidget {
                 border: Border.all(color: theme.dividerColor),
               ),
               child: Text(
+
                 skill.name,
                 style: theme.textTheme.bodyMedium,
               ),

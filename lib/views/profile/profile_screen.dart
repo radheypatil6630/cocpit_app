@@ -24,6 +24,7 @@ import 'photo_action_helper.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 
+
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
@@ -54,8 +55,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   List<Experience> experiences = [];
   List<Education> educations = [];
-  List<Skill> skills = [];
 
+
+  List<Skill> skills = [];
   bool isOverviewSelected = true;
   int connectionCount = 0;
   String? latestEducation;
@@ -95,6 +97,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           .map((e) => Education.fromJson(e))
           .toList();
 
+
       final List<Skill> fetchedSkills = (data['skills'] as List? ?? [])
           .map((s) => Skill.fromJson(s))
           .toList();
@@ -110,6 +113,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         final edu = fetchedEducations.first;
         educationStr = "${edu.school} ${edu.degree.isNotEmpty ? '• ${edu.degree}' : ''}";
       }
+
 
       setState(() {
         profile = data;
