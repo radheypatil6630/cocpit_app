@@ -152,7 +152,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
             ),
             _buildDivider(theme),
             ProfileSkillsSection(
-              // skills: user!.skills,
+
               skills: mappedSkills,
               onAddSkill: () {},
 

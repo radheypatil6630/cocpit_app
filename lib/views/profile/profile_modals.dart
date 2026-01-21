@@ -742,7 +742,7 @@ class _EducationModalState extends State<EducationModal> {
 }
 
 class SkillsModal extends StatefulWidget {
-  // final List<dynamic> initialSkills;
+
   final List<Skill> initialSkills;
 
   const SkillsModal({super.key, required this.initialSkills});
@@ -762,13 +762,8 @@ class _SkillsModalState extends State<SkillsModal> {
   @override
   void initState() {
     super.initState();
-    // for (final item in widget.initialSkills) {
-    //   final skill = Skill.fromJson(item);
-    //   _originalSkills.add(skill);
-    //   _workingSkills.add(skill);
-    // }
 
-   // changes by jules
+
     // Copy the list to avoid modifying the original list reference
     // Create new instances or just reference since Skill is immutable-ish (only final fields)
     // Actually, we want a shallow copy of the list containing the same Skill objects
