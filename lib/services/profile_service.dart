@@ -131,6 +131,7 @@ class ProfileService {
     }
   }
 
+
   /// =========================
   /// 🖼️ UPLOAD / REPLACE AVATAR
   /// =========================
@@ -149,8 +150,8 @@ class ProfileService {
   /// =========================
   Future<bool> uploadCover(File image) async {
     final response = await ApiClient.multipart(
-      "/profile/cover",
-      fileField: "cover",
+      "/profile/avatar",
+      fileField: "avatar",
       file: image,
     );
 
