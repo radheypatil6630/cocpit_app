@@ -10,9 +10,10 @@ import '../profile/public_profile_screen.dart';
 import 'chat_screen.dart';
 import 'notification_screen.dart';
 import '../bottom_navigation.dart';
-import 'create_career_moment_screen.dart';
-import 'career_moment_viewer.dart';
 import '../../widgets/app_top_bar.dart';
+import '../../models/story_model.dart';
+import '../../services/story_service.dart';
+import '../story/story_tray.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -35,12 +36,29 @@ class _HomeScreenState extends State<HomeScreen> {
   String _lastQuery = "";
   Timer? _debounce;
 
+  // 🔽 STORIES STATE
+  List<StoryGroup> _storyGroups = [];
+
   @override
   void initState() {
     super.initState();
     _searchController = TextEditingController();
     _searchFocusNode = FocusNode();
     _searchFocusNode.addListener(_onSearchFocusChange);
+    _fetchStories();
+  }
+
+  Future<void> _fetchStories() async {
+    try {
+      final stories = await StoryService.getGroupedStories();
+      if (mounted) {
+        setState(() {
+          _storyGroups = stories;
+        });
+      }
+    } catch (e) {
+      debugPrint("Failed to load stories: $e");
+    }
   }
 
   void _onSearchFocusChange() {
@@ -267,37 +285,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // --- Static UI Data ---
-  final List<Map<String, dynamic>> careerMoments = [
-    {
-      'name': 'You',
-      'isMine': true,
-      'stories': [
-        {'image': 'lib/images/profile.png', 'text': 'Just sharing my latest update with my close friends!', 'time': '1m ago'},
-      ],
-      'profile': 'lib/images/profile.png',
-      'image': 'lib/images/profile.png',
-    },
-    {
-      'name': 'Mike Torres',
-      'isMine': false,
-      'image': 'lib/images/story1.png',
-      'profile': 'lib/images/profile2.jpg',
-      'stories': [
-        {'image': 'lib/images/story1.png', 'text': 'Sneak peek of our latest feature!', 'time': '6h ago'},
-      ],
-    },
-    {
-      'name': 'James Wilson',
-      'isMine': false,
-      'image': 'lib/images/story4.png',
-      'profile': 'lib/images/profile3.jpg',
-      'stories': [
-        {'image': 'lib/images/story4.png', 'text': 'Insights from our data analysis project.', 'time': '8h ago'},
-      ],
-    },
-  ];
-
   final List<Map<String, dynamic>> _posts = [
     {
       'id': '1',
@@ -371,20 +358,23 @@ class _HomeScreenState extends State<HomeScreen> {
         onChanged: _onSearchChanged,
         layerLink: _layerLink,
       ),
-      body: ListView(
-        children: [
-          _storiesHeader(theme),
-          _careerMomentsBar(theme),
-          const SizedBox(height: 20),
-          _topRecentToggle(theme),
-          Divider(color: theme.dividerColor, height: 1),
-          ..._posts.map((post) {
-            if (post['type'] == 'suggested') {
-              return _suggestedForYouSection(theme);
-            }
-            return _postView(post, theme);
-          }),
-        ],
+      body: RefreshIndicator(
+        onRefresh: _fetchStories,
+        child: ListView(
+          children: [
+            _storiesHeader(theme),
+            StoryTray(storyGroups: _storyGroups, onRefresh: _fetchStories),
+            const SizedBox(height: 20),
+            _topRecentToggle(theme),
+            Divider(color: theme.dividerColor, height: 1),
+            ..._posts.map((post) {
+              if (post['type'] == 'suggested') {
+                return _suggestedForYouSection(theme);
+              }
+              return _postView(post, theme);
+            }),
+          ],
+        ),
       ),
       bottomNavigationBar: const AppBottomNavigation(currentIndex: 0),
     );
@@ -399,70 +389,6 @@ class _HomeScreenState extends State<HomeScreen> {
           Text("Stories", style: theme.textTheme.titleLarge),
           Text("View All", style: TextStyle(color: theme.primaryColor, fontSize: 14)),
         ],
-      ),
-    );
-  }
-
-  Widget _careerMomentsBar(ThemeData theme) {
-    double itemWidth = MediaQuery.of(context).size.width > 600 ? 150 : 120;
-
-    return SizedBox(
-      height: 180,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        itemCount: careerMoments.length,
-        itemBuilder: (context, index) {
-          final m = careerMoments[index];
-          return GestureDetector(
-            onTap: () {
-              if (m['isMine']) {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateCareerMomentScreen()));
-              } else {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => CareerMomentViewer(users: careerMoments, initialUserIndex: index)));
-              }
-            },
-            child: Container(
-              width: itemWidth,
-              margin: const EdgeInsets.only(right: 12),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                image: !m['isMine'] ? DecorationImage(image: AssetImage(m['image']), fit: BoxFit.cover) : null,
-                color: m['isMine'] ? theme.primaryColor : theme.cardColor,
-              ),
-              child: Stack(
-                children: [
-                  if (m['isMine'])
-                    Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(color: theme.colorScheme.onPrimary.withValues(alpha: 0.2), shape: BoxShape.circle),
-                            child: Icon(Icons.add, color: theme.colorScheme.onPrimary, size: 30),
-                          ),
-                          const SizedBox(height: 12),
-                          Text("Your Update", style: TextStyle(color: theme.colorScheme.onPrimary, fontWeight: FontWeight.bold, fontSize: 13)),
-                        ],
-                      ),
-                    ),
-                  if (!m['isMine'])
-                    Positioned(
-                      bottom: 8, left: 0, right: 0,
-                      child: Column(
-                        children: [
-                          CircleAvatar(radius: 18, backgroundColor: theme.primaryColor, child: CircleAvatar(radius: 16, backgroundImage: AssetImage(m['profile']))),
-                          const SizedBox(height: 4),
-                          Text(m['name'], style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
-                        ],
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          );
-        },
       ),
     );
   }
